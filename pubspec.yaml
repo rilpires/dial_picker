@@ -19,6 +19,8 @@ description: A simple widget to pick Duration values. Forked with updated depend
 # of the product and file versions while build-number is used as the build suffix.
 version: 1.0.0+1
 
+repository: https://github.com/rilpires/dial_picker
+
 environment:
   sdk: '>=2.18.0 <3.0.0'
 
