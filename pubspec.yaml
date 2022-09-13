@@ -1,4 +1,4 @@
-name: clock_picker
+name: dial_picker
 description: A simple widget to pick Duration values. Forked with updated dependencies from https://github.com/juliansteenbakker/duration_picker.
 
 # The following line prevents the package from being accidentally published to

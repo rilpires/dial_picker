@@ -180,7 +180,7 @@ class DialState extends State<Dial> with SingleTickerProviderStateMixin {
   int _minutes = 0;
   double _cartesianAngle = 0.0;
   late Offset _panPosition;
-  late Offset _clockCenter;
+  late Offset _dialCenter;
 
   @override
   void initState() {
@@ -261,11 +261,11 @@ class DialState extends State<Dial> with SingleTickerProviderStateMixin {
   }
 
   void _setAngleFromPan() {
-    final Offset offset = _panPosition - _clockCenter;
+    final Offset offset = _panPosition - _dialCenter;
     final double angle = (atan2(offset.dx, offset.dy) - (pi * 0.5)) % (2 * pi);
 
     // Stop accidental abrupt pans from making the dial seem like it starts from 1h.
-    // (happens when wanting to pan from 0 clockwise, but when doing so quickly, one actually pans from before 0 (e.g. setting the duration to 59mins, and then crossing 0, which would then mean 1h 1min).
+    // (happens when wanting to pan from 0 dialwise, but when doing so quickly, one actually pans from before 0 (e.g. setting the duration to 59mins, and then crossing 0, which would then mean 1h 1min).
     if (angle >= (pi * 0.5) &&
         _angleAnimation.value <= (pi * 0.5) &&
         // to allow the radians sign change at 15mins.
@@ -282,7 +282,7 @@ class DialState extends State<Dial> with SingleTickerProviderStateMixin {
     _dragging = true;
     final RenderBox box = context.findRenderObject() as RenderBox;
     _panPosition = box.globalToLocal(details.globalPosition);
-    _clockCenter = box.size.center(Offset.zero);
+    _dialCenter = box.size.center(Offset.zero);
 
     _notifyOnChangedIfNeeded();
   }
@@ -329,8 +329,8 @@ class DialState extends State<Dial> with SingleTickerProviderStateMixin {
     //
     // The resulting turning angle fully captures the state of the dial,
     // including multiple turns (= full hours). The [_cartesianAngle] is in
-    // mathematical coordinate system, i.e. 3-o-clock position being zero, and
-    // increasing counter clock wise.
+    // mathematical coordinate system, i.e. 3-o-dial position being zero, and
+    // increasing counter dial wise.
 
     // From positive to negative (in mathematical COS)
     if (newAngle > 1.5 * pi && oldAngle < 0.5 * pi) {
@@ -348,7 +348,7 @@ class DialState extends State<Dial> with SingleTickerProviderStateMixin {
     if (_dragging) {
       _dragging = false;
       _panPosition = Offset.zero;
-      _clockCenter = Offset.zero;
+      _dialCenter = Offset.zero;
       _animateTo(_angleFromDuration(widget.startDuration));
     }
   }
@@ -356,14 +356,14 @@ class DialState extends State<Dial> with SingleTickerProviderStateMixin {
   void _handleTapUp(TapUpDetails details) {
     final RenderBox box = context.findRenderObject() as RenderBox;
     _panPosition = box.globalToLocal(details.globalPosition);
-    _clockCenter = box.size.center(Offset.zero);
+    _dialCenter = box.size.center(Offset.zero);
     _setAngleFromPan();
     _notifyOnChangedIfNeeded();
 
     _animateTo(_angleFromDuration(_durationFromAngle(_angleAnimation.value)));
     _dragging = false;
     _panPosition = Offset.zero;
-    _clockCenter = Offset.zero;
+    _dialCenter = Offset.zero;
     setState(() {});
   }
 

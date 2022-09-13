@@ -1,23 +1,23 @@
-import 'package:clock_picker/clock_picker.dart';
+import 'package:dial_picker/dial_picker.dart';
 import 'package:flutter/material.dart';
 
-const double _kClockPickerWidthPortrait = 328.0;
-const double _kClockPickerHeightPortrait = 380;
-const double _kClockPickerWidthLandscape = 512.0;
-const double _kClockPickerHeightLandscape = 304.0;
+const double _kDialPickerWidthPortrait = 328.0;
+const double _kDialPickerHeightPortrait = 380;
+const double _kDialPickerWidthLandscape = 512.0;
+const double _kDialPickerHeightLandscape = 304.0;
 
-Future<Duration?> showClockPicker(
+Future<Duration?> showDialPicker(
     {required BuildContext context,
     required Duration initialTime,
     double? snapToMins}) async {
   return await showDialog<Duration>(
     context: context,
     builder: (BuildContext context) =>
-        _ClockPickerDialog(initialTime: initialTime, snapToMins: snapToMins),
+        _DialPickerDialog(initialTime: initialTime, snapToMins: snapToMins),
   );
 }
 
-class _ClockPickerDialog extends StatefulWidget {
+class _DialPickerDialog extends StatefulWidget {
   /// The duration initially selected when the dialog is shown.
   final Duration initialTime;
   final double? snapToMins;
@@ -25,15 +25,15 @@ class _ClockPickerDialog extends StatefulWidget {
   /// Creates a duration picker.
   ///
   /// [initialTime] must not be null.
-  const _ClockPickerDialog(
+  const _DialPickerDialog(
       {Key? key, required this.initialTime, this.snapToMins = 1})
       : super(key: key);
 
   @override
-  _ClockPickerDialogState createState() => _ClockPickerDialogState();
+  _DialPickerDialogState createState() => _DialPickerDialogState();
 }
 
-class _ClockPickerDialogState extends State<_ClockPickerDialog> {
+class _DialPickerDialogState extends State<_DialPickerDialog> {
   @override
   void initState() {
     super.initState();
@@ -106,8 +106,8 @@ class _ClockPickerDialogState extends State<_ClockPickerDialog> {
       switch (orientation) {
         case Orientation.portrait:
           return SizedBox(
-              width: _kClockPickerWidthPortrait,
-              height: _kClockPickerHeightPortrait,
+              width: _kDialPickerWidthPortrait,
+              height: _kDialPickerHeightPortrait,
               child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -118,8 +118,8 @@ class _ClockPickerDialogState extends State<_ClockPickerDialog> {
                   ]));
         case Orientation.landscape:
           return SizedBox(
-              width: _kClockPickerWidthLandscape,
-              height: _kClockPickerHeightLandscape,
+              width: _kDialPickerWidthLandscape,
+              height: _kDialPickerHeightLandscape,
               child: Row(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
