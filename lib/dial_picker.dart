@@ -7,6 +7,19 @@ import 'package:flutter/material.dart';
 const Duration _kDialAnimateDuration = Duration(milliseconds: 200);
 
 class _DialPainter extends CustomPainter {
+  final List<TextPainter> labels;
+  final Color? backgroundColor;
+  final Color accentColor;
+  final double theta;
+  final TextDirection textDirection;
+  final int? selectedValue;
+  final BuildContext context;
+
+  final double pct;
+  final int baseUnitMultiplier;
+  final int baseUnitHand;
+  final BaseUnit baseUnit;
+
   const _DialPainter({
     required this.context,
     required this.labels,
@@ -21,24 +34,11 @@ class _DialPainter extends CustomPainter {
     required this.baseUnit,
   });
 
-  final List<TextPainter> labels;
-  final Color? backgroundColor;
-  final Color accentColor;
-  final double theta;
-  final TextDirection textDirection;
-  final int? selectedValue;
-  final BuildContext context;
-
-  final double pct;
-  final int baseUnitMultiplier;
-  final int baseUnitHand;
-  final BaseUnit baseUnit;
-
   @override
   void paint(Canvas canvas, Size size) {
-    const _epsilon = .001;
-    const _sweep = (2 * pi) - _epsilon;
-    const _startAngle = -pi / 2.0;
+    const epsilon = .001;
+    const sweep = (2 * pi) - epsilon;
+    const startAngle = -pi / 2.0;
 
     final radius = size.shortestSide / 2.0;
     final center = Offset(size.width / 2.0, size.height / 2.0);
@@ -60,8 +60,8 @@ class _DialPainter extends CustomPainter {
         Paint()..color = Theme.of(context).canvasColor);
 
     // Get the offset point for an angle value of theta, and a distance of _radius
-    Offset getOffsetForTheta(double theta, double _radius) {
-      return center + Offset(_radius * cos(theta), -_radius * sin(theta));
+    Offset getOffsetForTheta(double theta, double radius) {
+      return center + Offset(radius * cos(theta), -radius * sin(theta));
     }
 
     // Draw the handle that is used to drag and to indicate the position around the circle
@@ -146,8 +146,8 @@ class _DialPainter extends CustomPainter {
         center: centerPoint,
         radius: radius - radius * 0.12 / 2,
       ),
-      _startAngle,
-      _sweep * pctTheta,
+      startAngle,
+      sweep * pctTheta,
       false,
       elapsedPainter,
     );
@@ -192,7 +192,8 @@ class _DialPainter extends CustomPainter {
 
 class Dial extends StatefulWidget {
   const Dial(
-      {required this.startDuration,
+      {super.key,
+      required this.startDuration,
       required this.onChanged,
       this.baseUnit = BaseUnit.minute,
       this.snapToMins = 1.0});
@@ -205,10 +206,41 @@ class Dial extends StatefulWidget {
   final double? snapToMins;
 
   @override
-  _DialState createState() => _DialState();
+  DialState createState() => DialState();
 }
 
-class _DialState extends State<Dial> with SingleTickerProviderStateMixin {
+class DialState extends State<Dial> with SingleTickerProviderStateMixin {
+  late Tween<double> _thetaTween;
+  late Animation<double> _theta;
+  late AnimationController _thetaController;
+
+  final double _pct = 0.0;
+  int _secondaryUnitValue = 0;
+  bool _dragging = false;
+  int _baseUnitValue = 0;
+  double _turningAngle = 0.0;
+
+  late ThemeData themeData;
+  MaterialLocalizations? localizations;
+  MediaQueryData? media;
+  Offset? _position;
+  Offset? _center;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    assert(debugCheckHasMediaQuery(context));
+    themeData = Theme.of(context);
+    localizations = MaterialLocalizations.of(context);
+    media = MediaQuery.of(context);
+  }
+
+  @override
+  void dispose() {
+    _thetaController.dispose();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -233,35 +265,6 @@ class _DialState extends State<Dial> with SingleTickerProviderStateMixin {
     _secondaryUnitValue = _secondaryUnitHand();
     _baseUnitValue = _baseUnitHand();
   }
-
-  late ThemeData themeData;
-  MaterialLocalizations? localizations;
-  MediaQueryData? media;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    assert(debugCheckHasMediaQuery(context));
-    themeData = Theme.of(context);
-    localizations = MaterialLocalizations.of(context);
-    media = MediaQuery.of(context);
-  }
-
-  @override
-  void dispose() {
-    _thetaController.dispose();
-    super.dispose();
-  }
-
-  late Tween<double> _thetaTween;
-  late Animation<double> _theta;
-  late AnimationController _thetaController;
-
-  final double _pct = 0.0;
-  int _secondaryUnitValue = 0;
-  bool _dragging = false;
-  int _baseUnitValue = 0;
-  double _turningAngle = 0.0;
 
   static double _nearest(double target, double a, double b) {
     return ((target - a).abs() < (target - b).abs()) ? a : b;
@@ -341,7 +344,6 @@ class _DialState extends State<Dial> with SingleTickerProviderStateMixin {
         _getBaseUnitToSecondaryUnitFactor(widget.baseUnit);
   }
 
-  // TODO: Fix snap to mins
   Duration _getTimeForTheta(double theta) {
     return _angleToDuration(_turningAngle);
   }
@@ -372,9 +374,6 @@ class _DialState extends State<Dial> with SingleTickerProviderStateMixin {
         ..end = angle;
     });
   }
-
-  Offset? _position;
-  Offset? _center;
 
   void _handlePanStart(DragStartDetails details) {
     assert(!_dragging);
@@ -617,7 +616,7 @@ extension BaseUnitExtension on BaseUnit {
     }
   }
 
-  int get _getBaseUnitToSecondaryUnitFactor {
+  int get upperUnitFactor {
     switch (this) {
       case BaseUnit.millisecond:
         return Duration.millisecondsPerSecond;
