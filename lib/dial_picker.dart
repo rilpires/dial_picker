@@ -1,58 +1,56 @@
-import 'package:flutter/material.dart';
+library duration_picker;
+
 import 'dart:math';
+
+import 'package:flutter/material.dart';
 
 const Duration _kDialAnimateDuration = Duration(milliseconds: 200);
 
-class DialPainter extends CustomPainter {
-  final List<TextPainter> labels;
-  final Color backgroundColor;
-  final Color accentColor;
-  final double angle;
-  final TextDirection textDirection;
-  final int selectedValue;
-  final BuildContext context;
-
-  final int multiplier;
-  final int minuteHand;
-
-  const DialPainter({
+class _DialPainter extends CustomPainter {
+  const _DialPainter({
     required this.context,
     required this.labels,
     required this.backgroundColor,
     required this.accentColor,
-    required this.angle,
+    required this.theta,
     required this.textDirection,
     required this.selectedValue,
-    required this.multiplier,
-    required this.minuteHand,
+    required this.pct,
+    required this.baseUnitMultiplier,
+    required this.baseUnitHand,
+    required this.baseUnit,
   });
+
+  final List<TextPainter> labels;
+  final Color? backgroundColor;
+  final Color accentColor;
+  final double theta;
+  final TextDirection textDirection;
+  final int? selectedValue;
+  final BuildContext context;
+
+  final double pct;
+  final int baseUnitMultiplier;
+  final int baseUnitHand;
+  final BaseUnit baseUnit;
 
   @override
   void paint(Canvas canvas, Size size) {
-    const double epsilon = .001;
-    const double sweep = (2 * pi) - epsilon;
-    const double startAngle = -pi / 2.0;
+    const _epsilon = .001;
+    const _sweep = (2 * pi) - _epsilon;
+    const _startAngle = -pi / 2.0;
 
-    final double radius = size.shortestSide / 2.0;
-    final Offset center = Offset(size.width / 2.0, size.height / 2.0);
-    final Offset centerPoint = center;
+    final radius = size.shortestSide / 2.0;
+    final center = Offset(size.width / 2.0, size.height / 2.0);
+    final centerPoint = center;
 
-    double pctAngle = (0.25 - (angle % (2 * pi)) / (2 * pi)) % 1.0;
+    var pctTheta = (0.25 - (theta % (2 * pi)) / (2 * pi)) % 1.0;
 
-    // Get the offset point for an angle value of angle, and a distance of _radius
-    Offset getOffsetForAngle(double angle, double radius) {
-      return center + Offset(radius * cos(angle), -radius * sin(angle));
-    }
+    // Draw the background outer ring
+    canvas.drawCircle(centerPoint, radius, Paint()..color = backgroundColor!);
 
-    // Draw the handle that is used to drag and to indicate the position around the circle
-    final Paint handlePaint = Paint()..color = accentColor;
-    final Offset handlePoint = getOffsetForAngle(angle, radius - 10.0);
-
-    // Draw the background outer && inner ring
-    canvas.drawCircle(centerPoint, radius, Paint()..color = backgroundColor);
-
-    // Draw a translucent circle for every hour
-    for (int i = 0; i < multiplier; i = i + 1) {
+    // Draw a translucent circle for every secondary unit
+    for (var i = 0; i < baseUnitMultiplier; i = i + 1) {
       canvas.drawCircle(centerPoint, radius,
           Paint()..color = accentColor.withOpacity((i == 0) ? 0.3 : 0.1));
     }
@@ -61,33 +59,70 @@ class DialPainter extends CustomPainter {
     canvas.drawCircle(centerPoint, radius * 0.88,
         Paint()..color = Theme.of(context).canvasColor);
 
+    // Get the offset point for an angle value of theta, and a distance of _radius
+    Offset getOffsetForTheta(double theta, double _radius) {
+      return center + Offset(_radius * cos(theta), -_radius * sin(theta));
+    }
+
+    // Draw the handle that is used to drag and to indicate the position around the circle
+    final handlePaint = Paint()..color = accentColor;
+    final handlePoint = getOffsetForTheta(theta, radius - 10.0);
     canvas.drawCircle(handlePoint, 20.0, handlePaint);
 
-    // Draw the Text in the center of the circle which displays hours and mins
-    String hours = (multiplier == 0) ? '' : "${multiplier}h ";
-    String minutes = "$minuteHand";
+    // Get the appropriate base unit string
+    String getBaseUnitString() {
+      switch (baseUnit) {
+        case BaseUnit.millisecond:
+          return 'ms.';
+        case BaseUnit.second:
+          return 'sec.';
+        case BaseUnit.minute:
+          return 'min.';
+        case BaseUnit.hour:
+          return 'hr.';
+      }
+    }
 
-    TextPainter textDurationValuePainter = TextPainter(
+    // Get the appropriate secondary unit string
+    String getSecondaryUnitString() {
+      switch (baseUnit) {
+        case BaseUnit.millisecond:
+          return 's ';
+        case BaseUnit.second:
+          return 'm ';
+        case BaseUnit.minute:
+          return 'h ';
+        case BaseUnit.hour:
+          return 'd ';
+      }
+    }
+
+    // Draw the Text in the center of the circle which displays the duration string
+    var secondaryUnits = (baseUnitMultiplier == 0)
+        ? ''
+        : '$baseUnitMultiplier${getSecondaryUnitString()} ';
+    var baseUnits = '$baseUnitHand';
+
+    var textDurationValuePainter = TextPainter(
         textAlign: TextAlign.center,
         text: TextSpan(
-//            text: '${hours}${minutes > 0 ? minutes : ""}',
-            text: '$hours$minutes',
+            text: '$secondaryUnits$baseUnits',
             style: Theme.of(context)
                 .textTheme
-                .displayLarge!
+                .headline2!
                 .copyWith(fontSize: size.shortestSide * 0.15)),
         textDirection: TextDirection.ltr)
       ..layout();
-    Offset middleForValueText = Offset(
+    var middleForValueText = Offset(
         centerPoint.dx - (textDurationValuePainter.width / 2),
         centerPoint.dy - textDurationValuePainter.height / 2);
     textDurationValuePainter.paint(canvas, middleForValueText);
 
-    TextPainter textMinPainter = TextPainter(
+    var textMinPainter = TextPainter(
         textAlign: TextAlign.center,
         text: TextSpan(
-            text: 'min.', //th: ${angle}',
-            style: Theme.of(context).textTheme.bodySmall),
+            text: getBaseUnitString(), //th: ${theta}',
+            style: Theme.of(context).textTheme.bodyText2),
         textDirection: TextDirection.ltr)
       ..layout();
     textMinPainter.paint(
@@ -111,25 +146,11 @@ class DialPainter extends CustomPainter {
         center: centerPoint,
         radius: radius - radius * 0.12 / 2,
       ),
-      startAngle,
-      sweep * pctAngle,
+      _startAngle,
+      _sweep * pctTheta,
       false,
       elapsedPainter,
     );
-
-    // Paint the labels (the minute strings)
-    final double labelAngleIncrement = -(2 * pi) / labels.length;
-    double labelAngle = (pi * 0.5);
-
-    for (TextPainter label in labels) {
-      final Offset labelOffset =
-          Offset(-label.width / 2.0, -label.height / 2.0);
-
-      label.paint(
-          canvas, getOffsetForAngle(labelAngle, radius - 40.0) + labelOffset);
-
-      labelAngle += labelAngleIncrement;
-    }
 
     // Thin line pointing to current angle
     canvas.drawLine(
@@ -141,72 +162,81 @@ class DialPainter extends CustomPainter {
           ..strokeWidth = 4
           ..color = accentColor.withOpacity(0.3)
           ..isAntiAlias = true);
+
+    // Paint the labels (the minute strings)
+    void paintLabels(List<TextPainter> labels) {
+      final labelThetaIncrement = -(2 * pi) / labels.length;
+      var labelTheta = (pi * 0.5);
+
+      for (var label in labels) {
+        final labelOffset = Offset(-label.width / 2.0, -label.height / 2.0);
+
+        label.paint(
+            canvas, getOffsetForTheta(labelTheta, radius - 40.0) + labelOffset);
+
+        labelTheta += labelThetaIncrement;
+      }
+    }
+
+    paintLabels(labels);
   }
 
   @override
-  bool shouldRepaint(DialPainter oldDelegate) {
-    return oldDelegate.labels != labels ||
-        oldDelegate.backgroundColor != backgroundColor ||
-        oldDelegate.accentColor != accentColor ||
-        oldDelegate.angle != angle;
+  bool shouldRepaint(_DialPainter oldPainter) {
+    return oldPainter.labels != labels ||
+        oldPainter.backgroundColor != backgroundColor ||
+        oldPainter.accentColor != accentColor ||
+        oldPainter.theta != theta;
   }
 }
 
 class Dial extends StatefulWidget {
   const Dial(
-      {super.key,
-      required this.startDuration,
+      {required this.startDuration,
       required this.onChanged,
+      this.baseUnit = BaseUnit.minute,
       this.snapToMins = 1.0});
 
   final Duration startDuration;
   final ValueChanged<Duration> onChanged;
+  final BaseUnit baseUnit;
 
   /// The resolution of mins of the dial, i.e. if snapToMins = 5.0, only durations of 5min intervals will be selectable.
   final double? snapToMins;
+
   @override
-  DialState createState() => DialState();
+  _DialState createState() => _DialState();
 }
 
-class DialState extends State<Dial> with SingleTickerProviderStateMixin {
-  late ThemeData themeData;
-  late MaterialLocalizations localizations;
-  late MediaQueryData media;
-  late Tween<double> _angleTween;
-  late Animation<double> _angleAnimation;
-  late AnimationController _angleController;
-  int _hours = 0;
-  bool _dragging = false;
-  int _minutes = 0;
-  double _cartesianAngle = 0.0;
-  late Offset _panPosition;
-  late Offset _dialCenter;
-
+class _DialState extends State<Dial> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _angleController = AnimationController(
+    _thetaController = AnimationController(
       duration: _kDialAnimateDuration,
       vsync: this,
     );
-    _angleTween =
-        Tween<double>(begin: _angleFromDuration(widget.startDuration));
-    _angleAnimation = _angleTween.animate(
-        CurvedAnimation(parent: _angleController, curve: Curves.fastOutSlowIn))
+    _thetaTween = Tween<double>(
+        begin: _getThetaForDuration(widget.startDuration, widget.baseUnit));
+    _theta = _thetaTween.animate(
+        CurvedAnimation(parent: _thetaController, curve: Curves.fastOutSlowIn))
       ..addListener(() => setState(() {}));
-    _angleController.addStatusListener((status) {
+    _thetaController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        _hours = _hourHand(_cartesianAngle);
-        _minutes = _minuteHand(_cartesianAngle);
+        _secondaryUnitValue = _secondaryUnitHand();
+        _baseUnitValue = _baseUnitHand();
         setState(() {});
       }
     });
 
-    _cartesianAngle =
-        (pi * 0.5) - widget.startDuration.inMinutes / 60.0 * (2 * pi);
-    _hours = _hourHand(_cartesianAngle);
-    _minutes = _minuteHand(_cartesianAngle);
+    _turningAngle = (pi * 0.5) - _turningAngleFactor() * (2 * pi);
+    _secondaryUnitValue = _secondaryUnitHand();
+    _baseUnitValue = _baseUnitHand();
   }
+
+  late ThemeData themeData;
+  MaterialLocalizations? localizations;
+  MediaQueryData? media;
 
   @override
   void didChangeDependencies() {
@@ -219,176 +249,296 @@ class DialState extends State<Dial> with SingleTickerProviderStateMixin {
 
   @override
   void dispose() {
-    _angleController.dispose();
+    _thetaController.dispose();
     super.dispose();
   }
+
+  late Tween<double> _thetaTween;
+  late Animation<double> _theta;
+  late AnimationController _thetaController;
+
+  final double _pct = 0.0;
+  int _secondaryUnitValue = 0;
+  bool _dragging = false;
+  int _baseUnitValue = 0;
+  double _turningAngle = 0.0;
 
   static double _nearest(double target, double a, double b) {
     return ((target - a).abs() < (target - b).abs()) ? a : b;
   }
 
-  void _animateTo(double targetAngle) {
-    final double currentAngle = _angleAnimation.value;
-    double beginAngle =
-        _nearest(targetAngle, currentAngle, currentAngle + (2 * pi));
-    beginAngle = _nearest(targetAngle, beginAngle, currentAngle - (2 * pi));
-    _angleTween
-      ..begin = beginAngle
-      ..end = targetAngle;
-    _angleController
+  void _animateTo(double targetTheta) {
+    final currentTheta = _theta.value;
+    var beginTheta =
+        _nearest(targetTheta, currentTheta, currentTheta + (2 * pi));
+    beginTheta = _nearest(targetTheta, beginTheta, currentTheta - (2 * pi));
+    _thetaTween
+      ..begin = beginTheta
+      ..end = targetTheta;
+    _thetaController
       ..value = 0.0
       ..forward();
   }
 
-  double _angleFromDuration(Duration duration) {
-    return ((pi * 0.5) - (duration.inMinutes % 60) / 60.0 * (2 * pi)) %
+  // Converts the duration to the chosen base unit. For example, for base unit minutes, this gets the number of minutes
+  // in the duration
+  int _getDurationInBaseUnits(Duration duration, BaseUnit baseUnit) {
+    switch (baseUnit) {
+      case BaseUnit.millisecond:
+        return duration.inMilliseconds;
+      case BaseUnit.second:
+        return duration.inSeconds;
+      case BaseUnit.minute:
+        return duration.inMinutes;
+      case BaseUnit.hour:
+        return duration.inHours;
+    }
+  }
+
+  // Converts the duration to the chosen secondary unit. For example, for base unit minutes, this gets the number
+  // of hours in the duration
+  int _getDurationInSecondaryUnits(Duration duration, BaseUnit baseUnit) {
+    switch (baseUnit) {
+      case BaseUnit.millisecond:
+        return duration.inSeconds;
+      case BaseUnit.second:
+        return duration.inMinutes;
+      case BaseUnit.minute:
+        return duration.inHours;
+      case BaseUnit.hour:
+        return duration.inDays;
+    }
+  }
+
+  // Gets the relation between the base unit and the secondary unit, which is the unit just greater than the base unit.
+  // For example if the base unit is second, it will get the number of seconds in a minute
+  int _getBaseUnitToSecondaryUnitFactor(BaseUnit baseUnit) {
+    switch (baseUnit) {
+      case BaseUnit.millisecond:
+        return Duration.millisecondsPerSecond;
+      case BaseUnit.second:
+        return Duration.secondsPerMinute;
+      case BaseUnit.minute:
+        return Duration.minutesPerHour;
+      case BaseUnit.hour:
+        return Duration.hoursPerDay;
+    }
+  }
+
+  double _getThetaForDuration(Duration duration, BaseUnit baseUnit) {
+    int baseUnits = _getDurationInBaseUnits(duration, baseUnit);
+    int baseToSecondaryFactor = _getBaseUnitToSecondaryUnitFactor(baseUnit);
+
+    return ((pi * 0.5) -
+            (baseUnits % baseToSecondaryFactor) /
+                baseToSecondaryFactor.toDouble() *
+                (2 * pi)) %
         (2 * pi);
   }
 
-  Duration _durationFromAngle(double angle) {
-    return _angleToDuration(_cartesianAngle);
+  double _turningAngleFactor() {
+    return _getDurationInBaseUnits(widget.startDuration, widget.baseUnit) /
+        _getBaseUnitToSecondaryUnitFactor(widget.baseUnit);
+  }
+
+  // TODO: Fix snap to mins
+  Duration _getTimeForTheta(double theta) {
+    return _angleToDuration(_turningAngle);
   }
 
   Duration _notifyOnChangedIfNeeded() {
-    _hours = _hourHand(_cartesianAngle);
-    _minutes = _minuteHand(_cartesianAngle);
-
-    var d = _angleToDuration(_cartesianAngle);
-
+    _secondaryUnitValue = _secondaryUnitHand();
+    _baseUnitValue = _baseUnitHand();
+    var d = _angleToDuration(_turningAngle);
     widget.onChanged(d);
 
     return d;
   }
 
-  void _setAngleFromPan() {
-    final Offset offset = _panPosition - _dialCenter;
-    final double angle = (atan2(offset.dx, offset.dy) - (pi * 0.5)) % (2 * pi);
+  void _updateThetaForPan() {
+    setState(() {
+      final offset = _position! - _center!;
+      final angle = (atan2(offset.dx, offset.dy) - (pi * 0.5)) % (2 * pi);
 
-    // Stop accidental abrupt pans from making the dial seem like it starts from 1h.
-    // (happens when wanting to pan from 0 dialwise, but when doing so quickly, one actually pans from before 0 (e.g. setting the duration to 59mins, and then crossing 0, which would then mean 1h 1min).
-    if (angle >= (pi * 0.5) &&
-        _angleAnimation.value <= (pi * 0.5) &&
-        // to allow the radians sign change at 15mins.
-        _angleAnimation.value >= 0.1 &&
-        _hours == 0) return;
+      // Stop accidental abrupt pans from making the dial seem like it starts from 1h.
+      // (happens when wanting to pan from 0 clockwise, but when doing so quickly, one actually pans from before 0 (e.g. setting the duration to 59mins, and then crossing 0, which would then mean 1h 1min).
+      if (angle >= (pi * 0.5) &&
+          _theta.value <= (pi * 0.5) &&
+          _theta.value >= 0.1 && // to allow the radians sign change at 15mins.
+          _secondaryUnitValue == 0) return;
 
-    _angleTween
-      ..begin = angle
-      ..end = angle;
+      _thetaTween
+        ..begin = angle
+        ..end = angle;
+    });
   }
+
+  Offset? _position;
+  Offset? _center;
 
   void _handlePanStart(DragStartDetails details) {
     assert(!_dragging);
     _dragging = true;
-    final RenderBox box = context.findRenderObject() as RenderBox;
-    _panPosition = box.globalToLocal(details.globalPosition);
-    _dialCenter = box.size.center(Offset.zero);
+    final box = context.findRenderObject() as RenderBox;
+    _position = box.globalToLocal(details.globalPosition);
+    _center = box.size.center(Offset.zero);
 
     _notifyOnChangedIfNeeded();
   }
 
   void _handlePanUpdate(DragUpdateDetails details) {
-    double oldAngle = _angleAnimation.value;
-    _panPosition += details.delta;
-    _setAngleFromPan();
-    double newAngle = _angleAnimation.value;
+    var oldTheta = _theta.value;
+    _position = _position! + details.delta;
+    // _position! += details.delta;
+    _updateThetaForPan();
+    var newTheta = _theta.value;
 
-    _updateCartesianAngle(oldAngle, newAngle);
+    _updateTurningAngle(oldTheta, newTheta);
     _notifyOnChangedIfNeeded();
-    setState(() {});
   }
 
-  int _hourHand(double angle) {
-    return _angleToDuration(angle).inHours.toInt();
+  int _secondaryUnitHand() {
+    return _getDurationInSecondaryUnits(widget.startDuration, widget.baseUnit);
   }
 
-  int _minuteHand(double angle) {
-    // Result is in [0; 59], even if overall time is >= 1 hour
-    return (_angleToMinutes(angle) % 60.0).toInt();
+  int _baseUnitHand() {
+    // Result is in [0; num base units in secondary unit - 1], even if overall time is >= 1 secondary unit
+    return _getDurationInBaseUnits(widget.startDuration, widget.baseUnit) %
+        _getBaseUnitToSecondaryUnitFactor(widget.baseUnit);
   }
 
   Duration _angleToDuration(double angle) {
-    return _minutesToDuration(_angleToMinutes(angle));
+    return _baseUnitToDuration(_angleToBaseUnit(angle));
   }
 
-  Duration _minutesToDuration(minutes) {
-    return Duration(
-        hours: (minutes ~/ 60).toInt(), minutes: (minutes % 60.0).toInt());
+  Duration _baseUnitToDuration(baseUnitValue) {
+    int unitFactor = _getBaseUnitToSecondaryUnitFactor(widget.baseUnit);
+
+    switch (widget.baseUnit) {
+      case BaseUnit.millisecond:
+        return Duration(
+            seconds: (baseUnitValue ~/ unitFactor).toInt(),
+            milliseconds: (baseUnitValue % unitFactor.toDouble()).toInt());
+      case BaseUnit.second:
+        return Duration(
+            minutes: (baseUnitValue ~/ unitFactor).toInt(),
+            seconds: (baseUnitValue % unitFactor.toDouble()).toInt());
+      case BaseUnit.minute:
+        return Duration(
+            hours: (baseUnitValue ~/ unitFactor).toInt(),
+            minutes: (baseUnitValue % unitFactor.toDouble()).toInt());
+      case BaseUnit.hour:
+        return Duration(
+            days: (baseUnitValue ~/ unitFactor).toInt(),
+            hours: (baseUnitValue % unitFactor.toDouble()).toInt());
+    }
   }
 
-  double _angleToMinutes(double angle) {
+  String _durationToBaseUnitString(Duration duration) {
+    switch (widget.baseUnit) {
+      case BaseUnit.millisecond:
+        return duration.inMilliseconds.toString();
+      case BaseUnit.second:
+        return duration.inSeconds.toString();
+      case BaseUnit.minute:
+        return duration.inMinutes.toString();
+      case BaseUnit.hour:
+        return duration.inHours.toString();
+    }
+  }
+
+  double _angleToBaseUnit(double angle) {
     // Coordinate transformation from mathematical COS to dial COS
-    double dialAngle = (pi * 0.5) - angle;
+    var dialAngle = (pi * 0.5) - angle;
 
     // Turn dial angle into minutes, may go beyond 60 minutes (multiple turns)
-    return dialAngle / (2 * pi) * 60.0;
+    return dialAngle /
+        (2 * pi) *
+        _getBaseUnitToSecondaryUnitFactor(widget.baseUnit);
   }
 
-  void _updateCartesianAngle(double oldAngle, double newAngle) {
+  void _updateTurningAngle(double oldTheta, double newTheta) {
     // Register any angle by which the user has turned the dial.
     //
     // The resulting turning angle fully captures the state of the dial,
-    // including multiple turns (= full hours). The [_cartesianAngle] is in
-    // mathematical coordinate system, i.e. 3-o-dial position being zero, and
-    // increasing counter dial wise.
+    // including multiple turns (= full hours). The [_turningAngle] is in
+    // mathematical coordinate system, i.e. 3-o-clock position being zero, and
+    // increasing counter clock wise.
 
     // From positive to negative (in mathematical COS)
-    if (newAngle > 1.5 * pi && oldAngle < 0.5 * pi) {
-      _cartesianAngle = _cartesianAngle - (((2 * pi) - newAngle) + oldAngle);
+    if (newTheta > 1.5 * pi && oldTheta < 0.5 * pi) {
+      _turningAngle = _turningAngle - (((2 * pi) - newTheta) + oldTheta);
     }
     // From negative to positive (in mathematical COS)
-    else if (newAngle < 0.5 * pi && oldAngle > 1.5 * pi) {
-      _cartesianAngle = _cartesianAngle + (((2 * pi) - oldAngle) + newAngle);
+    else if (newTheta < 0.5 * pi && oldTheta > 1.5 * pi) {
+      _turningAngle = _turningAngle + (((2 * pi) - oldTheta) + newTheta);
     } else {
-      _cartesianAngle = _cartesianAngle + (newAngle - oldAngle);
+      _turningAngle = _turningAngle + (newTheta - oldTheta);
     }
   }
 
   void _handlePanEnd(DragEndDetails details) {
-    if (_dragging) {
-      _dragging = false;
-      _panPosition = Offset.zero;
-      _dialCenter = Offset.zero;
-      _animateTo(_angleFromDuration(widget.startDuration));
-    }
+    assert(_dragging);
+    _dragging = false;
+    _position = null;
+    _center = null;
+    _animateTo(_getThetaForDuration(widget.startDuration, widget.baseUnit));
   }
 
   void _handleTapUp(TapUpDetails details) {
-    final RenderBox box = context.findRenderObject() as RenderBox;
-    _panPosition = box.globalToLocal(details.globalPosition);
-    _dialCenter = box.size.center(Offset.zero);
-    _setAngleFromPan();
+    final box = context.findRenderObject() as RenderBox;
+    _position = box.globalToLocal(details.globalPosition);
+    _center = box.size.center(Offset.zero);
+    _updateThetaForPan();
     _notifyOnChangedIfNeeded();
 
-    _animateTo(_angleFromDuration(_durationFromAngle(_angleAnimation.value)));
+    _animateTo(
+        _getThetaForDuration(_getTimeForTheta(_theta.value), widget.baseUnit));
     _dragging = false;
-    _panPosition = Offset.zero;
-    _dialCenter = Offset.zero;
-    setState(() {});
+    _position = null;
+    _center = null;
   }
 
-  List<TextPainter> _buildMinutes(TextTheme textTheme) {
-    final TextStyle style = textTheme.subtitle1!;
+  List<TextPainter> _buildBaseUnitLabels(TextTheme textTheme) {
+    final style = textTheme.subtitle1;
 
-    const List<Duration> minuteMarkerValues = <Duration>[
-      Duration(hours: 0, minutes: 0),
-      Duration(hours: 0, minutes: 5),
-      Duration(hours: 0, minutes: 10),
-      Duration(hours: 0, minutes: 15),
-      Duration(hours: 0, minutes: 20),
-      Duration(hours: 0, minutes: 25),
-      Duration(hours: 0, minutes: 30),
-      Duration(hours: 0, minutes: 35),
-      Duration(hours: 0, minutes: 40),
-      Duration(hours: 0, minutes: 45),
-      Duration(hours: 0, minutes: 50),
-      Duration(hours: 0, minutes: 55),
-    ];
+    var baseUnitMarkerValues = <Duration>[];
 
-    final List<TextPainter> labels = <TextPainter>[];
-    for (Duration duration in minuteMarkerValues) {
+    switch (widget.baseUnit) {
+      case BaseUnit.millisecond:
+        int interval = 100;
+        int factor = Duration.millisecondsPerSecond;
+        int length = factor ~/ interval;
+        baseUnitMarkerValues = List.generate(
+            length, (index) => Duration(milliseconds: index * interval));
+        break;
+      case BaseUnit.second:
+        int interval = 5;
+        int factor = Duration.secondsPerMinute;
+        int length = factor ~/ interval;
+        baseUnitMarkerValues = List.generate(
+            length, (index) => Duration(seconds: index * interval));
+        break;
+      case BaseUnit.minute:
+        int interval = 5;
+        int factor = Duration.minutesPerHour;
+        int length = factor ~/ interval;
+        baseUnitMarkerValues = List.generate(
+            length, (index) => Duration(minutes: index * interval));
+        break;
+      case BaseUnit.hour:
+        int interval = 3;
+        int factor = Duration.hoursPerDay;
+        int length = factor ~/ interval;
+        baseUnitMarkerValues =
+            List.generate(length, (index) => Duration(hours: index * interval));
+        break;
+    }
+
+    final labels = <TextPainter>[];
+    for (var duration in baseUnitMarkerValues) {
       var painter = TextPainter(
-        text: TextSpan(style: style, text: duration.inMinutes.toString()),
+        text: TextSpan(style: style, text: _durationToBaseUnitString(duration)),
         textDirection: TextDirection.ltr,
       )..layout();
       labels.add(painter);
@@ -398,20 +548,21 @@ class DialState extends State<Dial> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    Color backgroundColor;
+    Color? backgroundColor;
     switch (themeData.brightness) {
       case Brightness.light:
-        backgroundColor = Colors.grey.shade200;
+        backgroundColor = Colors.grey[200];
         break;
       case Brightness.dark:
         backgroundColor = themeData.backgroundColor;
         break;
     }
 
-    final ThemeData theme = Theme.of(context);
+    final theme = Theme.of(context);
 
-    _hours = _hourHand(_cartesianAngle);
-    _minutes = _minuteHand(_cartesianAngle);
+    int? selectedDialValue;
+    _secondaryUnitValue = _secondaryUnitHand();
+    _baseUnitValue = _baseUnitHand();
 
     return GestureDetector(
         excludeFromSemantics: true,
@@ -420,15 +571,17 @@ class DialState extends State<Dial> with SingleTickerProviderStateMixin {
         onPanEnd: _handlePanEnd,
         onTapUp: _handleTapUp,
         child: CustomPaint(
-          painter: DialPainter(
-            multiplier: _hours,
-            minuteHand: _minutes,
+          painter: _DialPainter(
+            pct: _pct,
+            baseUnitMultiplier: _secondaryUnitValue,
+            baseUnitHand: _baseUnitValue,
+            baseUnit: widget.baseUnit,
             context: context,
-            selectedValue: 0,
-            labels: _buildMinutes(theme.textTheme),
+            selectedValue: selectedDialValue,
+            labels: _buildBaseUnitLabels(theme.textTheme),
             backgroundColor: backgroundColor,
             accentColor: themeData.colorScheme.secondary,
-            angle: _angleAnimation.value,
+            theta: _theta.value,
             textDirection: Directionality.of(context),
           ),
         ));
@@ -436,3 +589,44 @@ class DialState extends State<Dial> with SingleTickerProviderStateMixin {
 }
 
 enum BaseUnit { millisecond, second, minute, hour }
+
+extension BaseUnitExtension on BaseUnit {
+  String get baseUnitString {
+    switch (this) {
+      case BaseUnit.millisecond:
+        return 'ms.';
+      case BaseUnit.second:
+        return 'sec.';
+      case BaseUnit.minute:
+        return 'min.';
+      case BaseUnit.hour:
+        return 'hr.';
+    }
+  }
+
+  String get secondaryUnitString {
+    switch (this) {
+      case BaseUnit.millisecond:
+        return 's ';
+      case BaseUnit.second:
+        return 'm ';
+      case BaseUnit.minute:
+        return 'h ';
+      case BaseUnit.hour:
+        return 'd ';
+    }
+  }
+
+  int get _getBaseUnitToSecondaryUnitFactor {
+    switch (this) {
+      case BaseUnit.millisecond:
+        return Duration.millisecondsPerSecond;
+      case BaseUnit.second:
+        return Duration.secondsPerMinute;
+      case BaseUnit.minute:
+        return Duration.minutesPerHour;
+      case BaseUnit.hour:
+        return Duration.hoursPerDay;
+    }
+  }
+}

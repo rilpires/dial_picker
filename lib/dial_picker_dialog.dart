@@ -1,3 +1,5 @@
+// ignore_for_file: unused_element
+
 import 'package:dial_picker/dial_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -6,14 +8,19 @@ const double _kDialPickerHeightPortrait = 380;
 const double _kDialPickerWidthLandscape = 512.0;
 const double _kDialPickerHeightLandscape = 304.0;
 
-Future<Duration?> showDialPicker(
-    {required BuildContext context,
-    required Duration initialTime,
-    double? snapToMins}) async {
+Future<Duration?> showDialPicker({
+  required BuildContext context,
+  required Duration initialTime,
+  BaseUnit baseUnit = BaseUnit.minute,
+  double? snapToMins,
+}) async {
   return await showDialog<Duration>(
     context: context,
-    builder: (BuildContext context) =>
-        _DialPickerDialog(initialTime: initialTime, snapToMins: snapToMins),
+    builder: (BuildContext context) => _DialPickerDialog(
+      initialTime: initialTime,
+      baseUnit: baseUnit,
+      snapToMins: snapToMins,
+    ),
   );
 }
 
@@ -21,12 +28,16 @@ class _DialPickerDialog extends StatefulWidget {
   /// The duration initially selected when the dialog is shown.
   final Duration initialTime;
   final double? snapToMins;
+  final BaseUnit baseUnit;
 
   /// Creates a duration picker.
   ///
   /// [initialTime] must not be null.
   const _DialPickerDialog(
-      {Key? key, required this.initialTime, this.snapToMins = 1})
+      {Key? key,
+      required this.initialTime,
+      this.snapToMins = 1,
+      this.baseUnit = BaseUnit.minute})
       : super(key: key);
 
   @override
@@ -75,6 +86,7 @@ class _DialPickerDialogState extends State<_DialPickerDialog> {
         child: AspectRatio(
             aspectRatio: 1.0,
             child: Dial(
+              baseUnit: widget.baseUnit,
               startDuration: _selectedDuration,
               onChanged: _handleTimeChanged,
               snapToMins: widget.snapToMins,
