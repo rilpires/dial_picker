@@ -1,5 +1,3 @@
-// ignore_for_file: unused_element
-
 import 'package:dial_picker/dial_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -107,9 +105,8 @@ class _DialPickerDialogState extends State<_DialPickerDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Expanded(
-                child:
-                    picker), // picker grows and shrinks with the available space
+            Expanded(child: picker),
+            // picker grows and shrinks with the available space
             actions,
           ],
         ),
